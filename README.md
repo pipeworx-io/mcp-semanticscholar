@@ -2,7 +2,7 @@
 
 Semantic Scholar Academic Graph MCP.
 
-Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 842+ live data sources.
+Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 867+ live data sources.
 
 ## Tools
 
@@ -23,7 +23,7 @@ Add to your MCP client (Claude Desktop, Cursor, Windsurf, etc.):
 }
 ```
 
-Or connect to the full Pipeworx gateway for access to all 842+ data sources:
+Or connect to the full Pipeworx gateway for access to all 867+ data sources:
 
 ```json
 {

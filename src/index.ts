@@ -30,6 +30,20 @@ interface McpToolExport {
 const BASE = 'https://api.semanticscholar.org/graph/v1';
 const UA = 'pipeworx/1.0 (+https://pipeworx.io)';
 
+/**
+ * Build request headers. When a Semantic Scholar API key is available — provided
+ * by the platform (PLATFORM_SEMANTICSCHOLAR_KEY, injected by the gateway as
+ * args._apiKey) or by a caller bringing their own — send it as `x-api-key` for a
+ * dedicated rate limit. The keyless public pool 429s aggressively; a key gives a
+ * private allowance. Falls back to keyless when no key is present.
+ */
+function s2Headers(args: Record<string, unknown>): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': UA };
+  const key = typeof args._apiKey === 'string' ? args._apiKey.trim() : '';
+  if (key) headers['x-api-key'] = key;
+  return headers;
+}
+
 const tools: McpToolExport['tools'] = [
   {
     name: 'search_papers',
@@ -139,7 +153,7 @@ function truncate(s: unknown, n: number): string | undefined {
 function rateLimited(): { error: string } {
   return {
     error:
-      'Semantic Scholar rate limit (429). The keyless public API throttles aggressively — wait a few seconds and retry.',
+      'Semantic Scholar rate limit (429). The API allows ~1 request/second (cumulative across endpoints) — retry in a moment.',
   };
 }
 
@@ -176,7 +190,7 @@ async function searchPapers(args: Record<string, unknown>): Promise<unknown> {
   if (typeof args.fields_of_study === 'string' && args.fields_of_study.trim())
     url += `&fieldsOfStudy=${encodeURIComponent(args.fields_of_study.trim())}`;
 
-  const res = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': UA } });
+  const res = await fetch(url, { headers: s2Headers(args) });
   if (res.status === 429) return rateLimited();
   if (!res.ok) return { error: `Semantic Scholar: ${res.status} ${(await res.text()).slice(0, 200)}` };
 
@@ -195,7 +209,7 @@ async function getPaper(args: Record<string, unknown>): Promise<unknown> {
     'title,abstract,year,authors,citationCount,referenceCount,venue,externalIds,url,openAccessPdf,tldr,fieldsOfStudy,publicationTypes';
 
   const url = `${BASE}/paper/${encodeURIComponent(paperId)}?fields=${encodeURIComponent(fields)}`;
-  const res = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': UA } });
+  const res = await fetch(url, { headers: s2Headers(args) });
   if (res.status === 429) return rateLimited();
   if (res.status === 404) return { error: 'paper not found', paper_id: paperId };
   if (!res.ok) return { error: `Semantic Scholar: ${res.status} ${(await res.text()).slice(0, 200)}` };
@@ -232,7 +246,7 @@ async function getPaperCitations(args: Record<string, unknown>): Promise<unknown
   const fields = 'title,year,authors,citationCount';
 
   const url = `${BASE}/paper/${encodeURIComponent(paperId)}/citations?fields=${encodeURIComponent(fields)}&limit=${limit}`;
-  const res = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': UA } });
+  const res = await fetch(url, { headers: s2Headers(args) });
   if (res.status === 429) return rateLimited();
   if (res.status === 404) return { error: 'paper not found', paper_id: paperId };
   if (!res.ok) return { error: `Semantic Scholar: ${res.status} ${(await res.text()).slice(0, 200)}` };
@@ -261,7 +275,7 @@ async function getAuthor(args: Record<string, unknown>): Promise<unknown> {
   const fields = 'name,affiliations,paperCount,citationCount,hIndex,url';
 
   const url = `${BASE}/author/search?query=${encodeURIComponent(name)}&fields=${encodeURIComponent(fields)}&limit=5`;
-  const res = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': UA } });
+  const res = await fetch(url, { headers: s2Headers(args) });
   if (res.status === 429) return rateLimited();
   if (!res.ok) return { error: `Semantic Scholar: ${res.status} ${(await res.text()).slice(0, 200)}` };
 
