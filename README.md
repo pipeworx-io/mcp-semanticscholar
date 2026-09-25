@@ -1,17 +1,50 @@
-# mcp-semanticscholar
+# @pipeworx/semanticscholar
 
-Semantic Scholar Academic Graph MCP.
+Semantic Scholar Academic Graph: search 200M+ papers, resolve a paper by ID,
+DOI or arXiv id, trace its citations, and look up authors with citation
+metrics and h-index.
 
-Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 1476+ live data sources.
+Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 1679+ live data sources.
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `search_papers` | Search 200M+ academic papers on Semantic Scholar by keyword or exact title. Returns titles, authors, year, venue, CITATION COUNTS, DOI, and open-access PDF links. PREFER for "how many citations does <paper title> have", "citation count for <paper>", "how cited is <paper>" — search the title and read citationCount off the match. Optionally filter by year range and field of study. Keyless. |
-| `get_paper` | Get full metadata for a single paper by ID. Accepts a Semantic Scholar paper ID, or a prefixed ID like "DOI:10.1145/3292500", "arXiv:2106.15928", or "CorpusId:215416146". Returns abstract, TLDR summary, authors, venue, citation/reference counts, fields of study, and open-access PDF. Keyless. |
-| `get_paper_citations` | List papers that CITE a given paper (the works citing it), with their titles, authors, year, and citation counts. Useful for forward citation tracing and finding follow-up work. Keyless. |
-| `get_author` | Search for academic authors by name on Semantic Scholar. Returns up to 5 matches with affiliations, paper count, total citation count, h-index, and profile URL. Keyless. |
+- `search_papers(query, year?, limit?)` — papers matching a query: title,
+  year, authors, venue, citation count, DOI, open-access PDF, abstract.
+- `get_paper(paper_id)` — one paper by Semantic Scholar id, `DOI:…` or
+  `arXiv:…`.
+- `get_paper_citations(paper_id, limit?)` — the papers citing it.
+- `get_author(name)` — an author's papers and citation metrics.
+
+## Auth
+
+Platform key (`PLATFORM_SEMANTICSCHOLAR_KEY`) sent as `x-api-key`. Without a
+key the public graph endpoints answer but rate-limit hard (429 under load).
+
+## Licence — zero-rated (fleet #1974)
+
+The key was issued under the Semantic Scholar API License Agreement
+(<https://api.semanticscholar.org/license/>). §2(a) limits use to
+*"legitimate, non-commercial, research and/or educational purposes"* and
+requires that *"any public use of Data must point back to Semantic Scholar at
+https://www.semanticscholar.org/ with a utm_source=api UTM parameter"*; the Use
+Restrictions forbid *"sell, lease, share, transfer, sublicense, commercialize
+… any Data obtained through the API"* to third parties. Consequences:
+
+- `zeroRated: true` on the gateway entry: 0 credits on every tier, no
+  volume-bracket slot.
+- Every response leads with `attribution` (the point-back), `license`
+  (`LicenseRef-SemanticScholar-API-License-Agreement`, `kind: vendor_terms`,
+  obligations `attribution` + `non_commercial`) and `license_note`, via
+  `attachLicense` in `@pipeworx/shared`.
+- Zero-rating removes the fee. It does not license onward sharing: the
+  caller's own use has to be non-commercial too, and the note says so.
+
+## Data sources
+
+- <https://api.semanticscholar.org/graph/v1/paper/search> — search.
+- <https://api.semanticscholar.org/graph/v1/paper/{id}> — one paper, and
+  `/citations` beneath it.
+- <https://api.semanticscholar.org/graph/v1/author/search> — authors.
 
 ## Quick Start
 
@@ -57,9 +90,45 @@ directly, instead of just this one's:
 }
 ```
 
-Both URLs reach the same gateway and the same 1476+ data sources. The
+Both URLs reach the same gateway and the same 1679+ data sources. The
 only difference is which pack's tools are listed **directly**; `ask_pipeworx`
 reaches all of them from either one.
+
+## No MCP client? Call it over HTTP
+
+```bash
+curl -X POST https://gateway.pipeworx.io/v1/tools/semanticscholar_search_papers \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"transformer attention mechanism","year":"2023","limit":10}'
+```
+
+No account needed for the first calls. Inspect any tool: `GET https://gateway.pipeworx.io/v1/tools/semanticscholar_search_papers`. Find one: `POST https://gateway.pipeworx.io/v1/tools/search_packs` with `{"query":"..."}`.
+
+## Standalone (no gateway account)
+
+This package also runs as a local stdio MCP server — no Pipeworx account, no
+gateway round-trip:
+
+```json
+{
+  "mcpServers": {
+    "semanticscholar": {
+      "command": "npx",
+      "args": ["-y", "@pipeworx/mcp-semanticscholar"]
+    }
+  }
+}
+```
+
+Or run it directly to confirm it starts:
+
+```bash
+npx -y @pipeworx/mcp-semanticscholar
+```
+
+It speaks MCP over stdin/stdout and answers `initialize`/`tools/list`/`tools/call`
+for **only** this pack's tools — none of the shared meta-tools the gateway
+connection above adds. Same source, same tools, no ask_pipeworx routing.
 
 ## Using with ask_pipeworx
 
@@ -80,13 +149,3 @@ The gateway picks the right tool and fills the arguments automatically.
 ## License
 
 MIT
-
-## No MCP client? Call it over HTTP
-
-```bash
-curl -X POST https://gateway.pipeworx.io/v1/tools/semanticscholar_search_papers \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"transformer attention mechanism","year":"2023","limit":10}'
-```
-
-No account needed for the first calls. Inspect any tool: `GET https://gateway.pipeworx.io/v1/tools/semanticscholar_search_papers`. Find one: `POST https://gateway.pipeworx.io/v1/tools/search_packs` with `{"query":"..."}`.
